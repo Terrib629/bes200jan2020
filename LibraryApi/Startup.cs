@@ -16,6 +16,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
 using System.Reflection;
 using System.IO;
+using LibraryApi.Mappers;
+using AutoMapper;
 
 namespace LibraryApi
 {
@@ -42,6 +44,10 @@ namespace LibraryApi
                 options.UseSqlServer(Configuration.GetConnectionString("LibraryDatabase"))
             );
 
+            services.AddScoped<IMapBooks, EfBookMapper>();
+            services.AddAutoMapper(typeof(Startup));
+
+
             services.AddSwaggerGen(c =>
             {
                 
@@ -62,7 +68,14 @@ namespace LibraryApi
                 c.IncludeXmlComments(xmlPath);
             });
 
-           
+            services.AddDistributedRedisCache(options =>
+            {
+                options.Configuration = Configuration.GetValue<string>("redisHost");
+
+            });
+
+            services.AddCors();
+            services.AddResponseCaching();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -73,7 +86,14 @@ namespace LibraryApi
                 app.UseDeveloperExceptionPage();
             }
 
-            app.UseCors();
+            app.UseCors(options =>
+            {
+                options.AllowAnyOrigin();
+                options.AllowAnyMethod();
+                options.AllowAnyHeader();
+
+            });
+
             app.UseSwagger();
 
             app.UseSwaggerUI(c =>
@@ -93,6 +113,10 @@ namespace LibraryApi
             {
                 endpoints.MapControllers();
             });
+
+            app.UseResponseCaching();  //think about it long and hard before you use it
+
+
         }
     }
 }
